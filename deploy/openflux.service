@@ -1,0 +1,15 @@
+[Unit]
+Description=OpenFlux exit node
+After=openflux-netns.service
+Requires=openflux-netns.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/openflux.env
+WorkingDirectory=/opt/openflux
+ExecStart=/usr/bin/ip netns exec openflux /opt/openflux/universal-bypass-tool --exit-node --url "${OPENFLUX_URL}" --transport ${OPENFLUX_TRANSPORT} --debug
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

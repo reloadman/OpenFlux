@@ -1,0 +1,12 @@
+[Unit]
+Description=Изолированное сетевое окружение для OpenFlux
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ofx-netns.sh
+
+[Install]
+WantedBy=multi-user.target

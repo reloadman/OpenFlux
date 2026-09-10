@@ -35,3 +35,11 @@ Thumbs.db
 
 .gradle/
 *.hprof
+
+# артефакты сборки Android-клиента (см. docs/ANDROID.md)
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/libs/*.aar
+android/app/src/main/jniLibs/
+mobile/*.aar

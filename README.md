@@ -4,6 +4,11 @@
 
 Network stack research tool. TCP tunnel with pluggable transports.
 
+> **Fork note.** This fork adds an Android client with VpnService, an isolated
+> deployment for the exit node, and notes on practical pitfalls.
+> See [docs/FORK.md](docs/FORK.md), [docs/ANDROID.md](docs/ANDROID.md),
+> [docs/DEPLOY.md](docs/DEPLOY.md).
+
 ## Overview
 ```
 Client (SOCKS5) --> Transport --> Exit Node --> Internet
