@@ -28,6 +28,8 @@
 
 ## Мелочи
 
+* `build_apk.sh` — собирает APK целиком: бинарь клиента, AAR с tun2socks и само
+  приложение. Проверен на чистой сборке.
 * `build_android_linux.sh` — сборка Android-бинаря на Linux. В штатном
   `build_android.sh` путь к toolchain зашит под macOS (`darwin-x86_64`), на Linux он не
   отрабатывает.

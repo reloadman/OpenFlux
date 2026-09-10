@@ -19,6 +19,21 @@ VpnService (tun) → tun2socks → SOCKS5 (127.0.0.1:1080) → openflux --client
 
 Нужны Go 1.26.3+, Android NDK r27+, Android SDK 35, JDK 17, Gradle 8.7.
 
+Всё сразу — бинарь, AAR и APK:
+
+```bash
+export ANDROID_NDK_HOME=/opt/android-ndk
+export ANDROID_HOME=/opt/android-sdk
+./build_apk.sh
+# android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Пути к NDK и SDK берутся из переменных окружения (по умолчанию `/opt/android-ndk`
+и `/opt/android-sdk`), команда Gradle — из `GRADLE`. Недостающий `gomobile`
+скрипт доставит сам.
+
+### Те же шаги вручную
+
 ```bash
 # 1. бинарь клиента под arm64
 export ANDROID_NDK_HOME=/opt/android-ndk
