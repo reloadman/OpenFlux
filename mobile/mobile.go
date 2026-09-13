@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/xjasonlyu/tun2socks/v2/engine"
+	"github.com/xjasonlyu/tun2socks/v2/tunnel"
 )
 
 var (
@@ -33,8 +34,28 @@ func Start(fd int, socksAddr string, logLevel string) error {
 	}
 	engine.Insert(key)
 	engine.Start()
+	interceptDNS()
 	started = true
 	return nil
+}
+
+// interceptDNS routes DNS through the tunnel over TCP.
+func interceptDNS() {
+	// Движок уже создал прокси из ключа выше, и туннель хранит его глобально.
+	// Подменяем его обёрткой: она пропускает всё как раньше и трогает только
+	// UDP на порт 53, иначе запрос ушёл бы напрямую к резолверу оператора.
+	t := tunnel.T()
+	if t == nil {
+		return
+	}
+	inner := t.Proxy()
+	if inner == nil {
+		return
+	}
+	if _, wrapped := inner.(*dnsOverTCPProxy); wrapped {
+		return
+	}
+	t.SetProxy(&dnsOverTCPProxy{inner: inner})
 }
 
 // Stop halts packet forwarding.

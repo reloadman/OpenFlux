@@ -27,7 +27,6 @@ class OpenFluxVpnService : VpnService() {
         const val EXTRA_MESSAGE = "message"
 
         private const val SOCKS_ADDR = "127.0.0.1:1080"
-        private const val DNS_SERVER = "1.1.1.1"
         private const val CHANNEL_ID = "openflux"
     }
 
@@ -84,17 +83,16 @@ class OpenFluxVpnService : VpnService() {
                 .setSession("OpenFlux")
                 .setMtu(1500)
                 .addAddress("10.255.0.1", 30)
-                .addDnsServer(DNS_SERVER)
+                .addRoute("0.0.0.0", 0)
 
-            // SOCKS5 в OpenFlux принимает только CONNECT, то есть UDP через
-            // туннель не ходит, а DNS работает именно по UDP. Поэтому в туннель
-            // отправляем весь интернет, КРОМЕ адреса DNS-сервера: иначе запросы
-            // уходят в никуда и домены перестают резолвиться.
-            // excludeRoute() умеет только Android 13+, поэтому строим маршруты
-            // вручную — так работает на любой версии.
-            for (route in routesExcluding(DNS_SERVER)) {
-                builder.addRoute(route.first, route.second)
-            }
+            // DNS отдаём внутрь туннеля, а не оператору. При ограничениях его
+            // резолвер отвечает только по белому списку, поэтому обычный UDP-запрос
+            // вернул бы подделку или молчание. Перехватчик в Go ловит порт 53 и
+            // повторяет запрос по TCP (RFC 7766) внутри туннеля, так что «Частный
+            // DNS» включать больше не нужно.
+            builder.addDnsServer("1.1.1.1")
+            builder.addDnsServer("8.8.8.8")
+
             builder.addDisallowedApplication(packageName)
 
             val descriptor = builder.establish()
@@ -132,26 +130,6 @@ class OpenFluxVpnService : VpnService() {
         } catch (_: Throwable) {}
         stopSelf()
     }
-
-    // Разбивает 0.0.0.0/0 на префиксы так, чтобы указанный адрес в них не попал.
-    private fun routesExcluding(excluded: String): List<Pair<String, Int>> {
-        val target = excluded.split(".").map { it.toInt() }
-        var addr = (target[0].toLong() shl 24) or (target[1].toLong() shl 16) or
-                   (target[2].toLong() shl 8) or target[3].toLong()
-        val routes = ArrayList<Pair<String, Int>>(32)
-        for (prefix in 32 downTo 1) {
-            // на каждом шаге берём соседний блок того же размера — вместе они
-            // покрывают всё пространство, кроме исключаемого адреса
-            val sibling = addr xor (1L shl (32 - prefix))
-            val masked = sibling and (-1L shl (32 - prefix)) and 0xFFFFFFFFL
-            routes.add(Pair(longToIp(masked), prefix))
-            addr = addr and (-1L shl (32 - prefix)) and 0xFFFFFFFFL
-        }
-        return routes
-    }
-
-    private fun longToIp(value: Long): String =
-        "${(value shr 24) and 0xFF}.${(value shr 16) and 0xFF}.${(value shr 8) and 0xFF}.${value and 0xFF}"
 
     private fun pumpLogs(process: Process) {
         Thread {
