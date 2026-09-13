@@ -25,6 +25,7 @@ class OpenFluxVpnService : VpnService() {
         const val BROADCAST_STATUS = "com.openflux.app.STATUS"
         const val EXTRA_RUNNING = "running"
         const val EXTRA_MESSAGE = "message"
+        const val EXTRA_IS_LOG = "isLog"
 
         private const val SOCKS_ADDR = "127.0.0.1:1080"
         private const val CHANNEL_ID = "openflux"
@@ -45,7 +46,12 @@ class OpenFluxVpnService : VpnService() {
                     stopSelf()
                     return START_NOT_STICKY
                 }
-                startTunnel(url)
+                // Уведомление обязано появиться сразу, иначе система убьёт сервис
+                // за то, что он не стал foreground вовремя.
+                startForeground(1, buildNotification())
+                // Запуск ждёт полторы секунды и читает вывод процесса — в главном
+                // потоке это давало «приложение не отвечает».
+                Thread { startTunnel(url) }.apply { isDaemon = true; start() }
             }
         }
         return START_STICKY
@@ -53,8 +59,6 @@ class OpenFluxVpnService : VpnService() {
 
     private fun startTunnel(url: String) {
         try {
-            startForeground(1, buildNotification())
-
             // Android 10+ запрещает исполнять файлы из каталога данных, поэтому
             // бинарь поставляется как нативная библиотека.
             val binary = File(applicationInfo.nativeLibraryDir, "libopenflux.so")
@@ -103,6 +107,8 @@ class OpenFluxVpnService : VpnService() {
             }
             tun = descriptor
 
+            // Go дублирует этот дескриптор и закрывает уже собственную копию,
+            // поэтому закрыть свой мы можем безопасно.
             Openfluxmobile.start(descriptor.fd.toLong(), SOCKS_ADDR, "warning")
             report(true, "Туннель активен")
         } catch (e: Throwable) {
@@ -115,12 +121,22 @@ class OpenFluxVpnService : VpnService() {
     // (из кнопки и следом из onDestroy), что роняло приложение.
     private fun shutdown() {
         if (!stopping.compareAndSet(false, true)) return
+
+        // Порядок важен: сначала tun2socks отпускает свою копию дескриптора,
+        // потом гасим клиента, и только затем закрываем дескриптор сами.
         try { Openfluxmobile.stop() } catch (_: Throwable) {}
-        try { tunnelProcess?.destroy() } catch (_: Throwable) {}
+
+        try {
+            tunnelProcess?.destroy()
+            tunnelProcess?.waitFor()
+        } catch (_: Throwable) {}
+
         try { tun?.close() } catch (_: Throwable) {}
+
         tunnelProcess = null
         tun = null
         report(false, "Остановлен")
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -143,18 +159,28 @@ class OpenFluxVpnService : VpnService() {
                     val now = System.currentTimeMillis()
                     if (now - lastSent < 400) return@forEachLine
                     lastSent = now
-                    report(true, line.take(160))
+                    reportLog(line.take(160))
                 }
             } catch (_: Throwable) {}
         }.apply { isDaemon = true; start() }
     }
 
+    // Строка вывода клиента: попадает только в журнал и не трогает статус.
+    private fun reportLog(message: String) {
+        broadcast(running = true, message = message, isLog = true)
+    }
+
     private fun report(running: Boolean, message: String) {
+        broadcast(running = running, message = message, isLog = false)
+    }
+
+    private fun broadcast(running: Boolean, message: String, isLog: Boolean) {
         try {
             sendBroadcast(Intent(BROADCAST_STATUS).apply {
                 setPackage(packageName)
                 putExtra(EXTRA_RUNNING, running)
                 putExtra(EXTRA_MESSAGE, message)
+                putExtra(EXTRA_IS_LOG, isLog)
             })
         } catch (_: Throwable) {}
     }

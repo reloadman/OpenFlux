@@ -7,6 +7,7 @@ import (
 
 	"github.com/xjasonlyu/tun2socks/v2/engine"
 	"github.com/xjasonlyu/tun2socks/v2/tunnel"
+	"golang.org/x/sys/unix"
 )
 
 var (
@@ -26,24 +27,36 @@ func Start(fd int, socksAddr string, logLevel string) error {
 	if logLevel == "" {
 		logLevel = "warning"
 	}
+
+	// Дублируем дескриптор: при остановке tun2socks делает unix.Close() на том
+	// номере, что ему передали. Если это был бы дескриптор из ParcelFileDescriptor,
+	// то Kotlin закрыл бы его повторно — а к этому моменту номер могли переиспользовать,
+	// и приложение падало бы нативно, мимо try/catch. Теперь каждая сторона
+	// закрывает собственный дескриптор.
+	dup, err := unix.Dup(fd)
+	if err != nil {
+		return fmt.Errorf("dup tun fd: %w", err)
+	}
+
+	resetCounters()
 	key := &engine.Key{
-		Device:   fmt.Sprintf("fd://%d", fd),
+		Device:   fmt.Sprintf("fd://%d", dup),
 		Proxy:    fmt.Sprintf("socks5://%s", socksAddr),
 		LogLevel: logLevel,
 		MTU:      1500,
 	}
 	engine.Insert(key)
 	engine.Start()
-	interceptDNS()
+	wrapProxy()
 	started = true
 	return nil
 }
 
-// interceptDNS routes DNS through the tunnel over TCP.
-func interceptDNS() {
+// wrapProxy adds DNS interception and byte counting.
+func wrapProxy() {
 	// Движок уже создал прокси из ключа выше, и туннель хранит его глобально.
-	// Подменяем его обёрткой: она пропускает всё как раньше и трогает только
-	// UDP на порт 53, иначе запрос ушёл бы напрямую к резолверу оператора.
+	// Счётчик кладём под перехватчик DNS, чтобы запросы к резолверу тоже попадали
+	// в статистику.
 	t := tunnel.T()
 	if t == nil {
 		return
@@ -55,7 +68,7 @@ func interceptDNS() {
 	if _, wrapped := inner.(*dnsOverTCPProxy); wrapped {
 		return
 	}
-	t.SetProxy(&dnsOverTCPProxy{inner: inner})
+	t.SetProxy(&dnsOverTCPProxy{inner: &countingProxy{inner: inner}})
 }
 
 // Stop halts packet forwarding.

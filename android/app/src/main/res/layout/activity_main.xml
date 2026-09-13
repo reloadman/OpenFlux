@@ -27,29 +27,93 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Остановлен"
-        android:textSize="20sp"
+        android:textSize="22sp"
         android:textStyle="bold"
         android:gravity="center"
-        android:layout_marginTop="40dp" />
+        android:layout_marginTop="32dp" />
+
+    <TextView
+        android:id="@+id/activityText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="13sp"
+        android:gravity="center"
+        android:layout_marginTop="4dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="16dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Отправлено"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/upText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Б"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/upRateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Б/с"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Получено"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/downText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Б"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/downRateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 Б/с"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/detailText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text=""
-        android:textSize="13sp"
-        android:gravity="center"
-        android:layout_marginTop="8dp" />
-
-
-    <TextView
-        android:id="@+id/dnsHint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="DNS идёт через туннель по TCP — отдельных настроек не требуется"
         android:textSize="12sp"
         android:gravity="center"
-        android:layout_marginTop="12dp" />
+        android:layout_marginTop="16dp" />
 
     <Button
         android:id="@+id/toggleButton"
@@ -57,14 +121,14 @@
         android:layout_height="60dp"
         android:text="ВКЛЮЧИТЬ"
         android:textSize="16sp"
-        android:layout_marginTop="32dp" />
+        android:layout_marginTop="20dp" />
 
     <TextView
         android:id="@+id/logText"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginTop="24dp"
+        android:layout_marginTop="20dp"
         android:textSize="11sp"
         android:fontFamily="monospace"
         android:scrollbars="vertical" />
