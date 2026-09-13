@@ -154,10 +154,20 @@ class OpenFluxVpnService : VpnService() {
                 process.inputStream.bufferedReader().forEachLine { line ->
                     // Подробный режим сыплет построчным дампом пакетов: если слать
                     // это в интерфейс, он захлёбывается и приложение падает.
-                    // Пропускаем дамп и ограничиваем частоту обновлений.
                     if (line.contains(" bytes - TCP") || line.contains("[STATS]")) return@forEachLine
+
+                    // Ограничение частоты душило и диагностику: клиент печатает всё
+                    // важное одной пачкой за первые миллисекунды, и на экране
+                    // оставалась ровно одна строка. Сообщения об ошибках пропускаем
+                    // всегда, ограничиваем только рутину.
+                    val important = line.contains("failed", ignoreCase = true) ||
+                        line.contains("error", ignoreCase = true) ||
+                        line.contains("refused", ignoreCase = true) ||
+                        line.contains("timeout", ignoreCase = true) ||
+                        line.contains("connect", ignoreCase = true)
+
                     val now = System.currentTimeMillis()
-                    if (now - lastSent < 400) return@forEachLine
+                    if (!important && now - lastSent < 400) return@forEachLine
                     lastSent = now
                     reportLog(line.take(160))
                 }
